@@ -152,7 +152,7 @@ package mustache {
           }
           stack = addSection(List[Token](), stack)
         }
-        case '>' || '<' =>
+        case '>' | '<' =>
           stack = PartialToken(skipFirst)::stack
         case '=' =>
           if (content.size>2 && content.endsWith("=")) {
