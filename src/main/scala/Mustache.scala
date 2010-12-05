@@ -186,6 +186,7 @@ package mustache {
       }
     }
   }
+  }
 
   /**
    * compiled template
@@ -208,21 +209,21 @@ package mustache {
   // mustache tokens ------------------------------------------
 
   trait Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder
   }
 
   case class IncompleteSection(key:String, inverted:Boolean) extends Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
       throw new Exception("Weird thing happened. There is incoplete section in compiled template.")
   }
 
   case class StaticTextToken(staticText:String) extends Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
       output.append(staticText)
   }
 
   case class PartialToken(key:String) extends Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
       partials.get(key) match {
         case Some(template) => template.render(context, partials, output)
         case _ => throw new IllegalArgumentException("Partial \""+key+"\" is not defined.")
@@ -236,6 +237,7 @@ package mustache {
 
     def valueOf(key:String, context:Any):Any =
       context match {
+        case null => None
         case m : MapLike[String,_,_] =>
           m.get(key) match {
             case Some(v) => v
@@ -249,7 +251,7 @@ package mustache {
       def reflection(key:String):Any = {
         val w = wrapped
         (methods(w).get(key), fields(w).get(key)) match {
-          case (Some(m), _) => m.invoke(w, Nil)
+          case (Some(m), _) => m.invoke(w)
           case (None, Some(f)) => f.get(w)
           case _ => None
         }
@@ -297,18 +299,24 @@ package mustache {
     ,children:List[Token]
   ) extends Token with ContextHandler {
 
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
       valueOf(key, context) match {
-        case null if (inverted) => 
-          renderChildren(context, partials, output)
-        case None if (inverted) => 
-          renderChildren(context, partials, output)
-        case b:Boolean if (b^inverted) => 
-          renderChildren(context, partials, output)
+        case null => 
+          if (inverted) renderChildren(context, partials, output)
+          else output
+        case None => 
+          if (inverted) renderChildren(context, partials, output)
+          else output
+        case b:Boolean => 
+          if (b^inverted) renderChildren(context, partials, output)
+          else output
         case s:Seq[_] if(inverted) => 
           if (s.isEmpty) renderChildren(context, partials, output)
-        case s:Seq[_] if(!inverted) => 
+          else output
+        case s:Seq[_] if(!inverted) => {
           s foreach { renderChildren(_, partials, output) }
+          output
+        }
         case other => renderChildren(other,partials, output)
       }
 
@@ -316,7 +324,10 @@ package mustache {
        context:Any
       ,partials:Map[String,Mustache]
       ,output:StringBuilder
-    ):Unit = children foreach { _.render(context, partials, output) }
+    ):StringBuilder = {
+      children foreach { _.render(context, partials, output) }
+      output
+    }
 
   }
 
@@ -325,7 +336,7 @@ package mustache {
     with ContextHandler 
     with ValuesFormatter {
 
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
       output.append(format(valueOf(key,context)))
   }
 
@@ -334,14 +345,15 @@ package mustache {
     with ContextHandler 
     with ValuesFormatter {
 
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder = {
       format(valueOf(key,context)).foreach({
         case '<' => output.append("&lt;")
         case '>' => output.append("&gt;")
         case '&' => output.append("&amp;")
         case c => output.append(c)
       })
+      output
+    }
   }
 
-  }
 }

@@ -3,9 +3,9 @@ import org.specs.runner._
 
 
 package mustache {
-object MustacheSpecification extends SpecificationWithJUnit {
+object ManPageExamplesSpecification extends SpecificationWithJUnit {
 
-  "mutache should" should {
+  "mutache" should {
 
     "render typical template from man page" in {
       Mustache(
@@ -65,6 +65,53 @@ object MustacheSpecification extends SpecificationWithJUnit {
         "person?" -> Map("name"->"John")
       )).toString must be equalTo(
         "Hi John!"
+      )
+    }
+
+    "render inverted section example from man page" in {
+      Mustache(
+        "{{#repo}}<b>{{name}}</b>{{/repo}}{{^repo}}No repos :({{/repo}}"
+      ).render(Map(
+        "repo" -> Nil
+      )).toString must be equalTo(
+        "No repos :("
+      )
+    }
+
+    "render comments example from man page" in {
+      Mustache(
+        "<h1>Today{{! ignore me }}.</h1>"
+      ).render().toString must be equalTo(
+        "<h1>Today.</h1>"
+      )
+    }
+
+    "render partials example from man page" in {
+      val userTemplate = Mustache("<strong>{{name}}</strong>")
+      val baseTemplate = Mustache(
+        "<h2>Names</h2>\n{{#names}}\n  {{> user}}\n{{/names}}"
+      )
+      val ctx = Map("names"->List(
+                       Map("name"->"Alice")
+                      ,Map("name"->"Bob")
+                ))
+      val partials = Map("user" -> userTemplate)
+
+      baseTemplate.render(ctx, partials).toString must be equalTo(
+        "<h2>Names</h2>\n\n<strong>Alice</strong>\n\n<strong>Bob</strong>\n"
+      )
+    }
+
+    "render delimiters example from man page" in {
+      Mustache(
+        "* {{default_tags}}\n{{=<% %>=}}\n* <% erb_style_tags %>\n"+
+        "<%={{ }}=%>\n* {{ default_tags_again }}"
+      ).render(Map(
+        "default_tags" -> "Line one"
+        ,"erb_style_tags" -> "Line two"
+        ,"default_tags_again" -> "Line three"
+      )).toString must be equalTo(
+        "* Line one\n\n* Line two\n\n* Line three"
       )
     }
 
