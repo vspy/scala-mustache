@@ -78,6 +78,34 @@ object ParserSpecification extends SpecificationWithJUnit {
       Mustache("{{}}") must throwA[MustacheParseException]
     }
 
+    "handle sections" in {
+      Mustache(
+        "Message: {{#needToGreet}}Hello, {{name}}!{{/needToGreet}}"
+      ).render(
+        Map("needToGreet"->true, "name"->"world")
+      ).toString must be equalTo(
+        "Message: Hello, world!"
+      )
+
+      Mustache(
+        "Message: {{#needToGreet}}Hello, {{name}}!{{/needToGreet}}"
+      ).render(
+        Map("needToGreet"->false, "name"->"world")
+      ).toString must be equalTo(
+        "Message: "
+      )
+    }
+
+    "handle nested sections" in {
+      Mustache(
+        "{{#foo}}>>{{#bar}}Hello, {{name}}!{{/bar}}<<{{/foo}}"
+      ).render(
+        Map("foo"->Map("bar"->Map("name"->"world")))
+      ).toString must be equalTo(
+        ">>Hello, world!<<"
+      )
+    }
+
     "report error for unclosed section" in {
       Mustache("some text {{#foo}} some internal text") must throwA[MustacheParseException]
     }
