@@ -1,4 +1,7 @@
+import scala.annotation.tailrec
 import scala.io.Source
+import scala.collection.MapLike
+import java.lang.reflect.{Field=>F,Method=>M}
 
 package mustache {
 
@@ -6,12 +9,17 @@ package mustache {
     extends Exception("Line "+line+": "+msg)
 
   object Mustache {
+
+    def apply(
+        str:String
+      ):Mustache = apply(Source.fromString(str))
+
     def apply(
         source:Source
       , open:String = "{{"
       , close:String = "}}"
-      ) = new Mustache { 
-            private val compiledTemplate = 
+      ):Mustache = new Mustache { 
+            val compiledTemplate = 
               (new Parser{
                 val src = source
                 var otag = open
@@ -25,7 +33,7 @@ package mustache {
     private object Tag  extends ParserState
     private object CTag extends ParserState
 
-    private class Parser {
+    private abstract class Parser {
       val src:Source
 
       var state:ParserState = Text
@@ -40,7 +48,7 @@ package mustache {
 
       val buf = new StringBuilder(8192)
 
-      def parse() = {
+      def parse():List[Token] = {
 
         while(consume) {
           state match {
@@ -75,6 +83,17 @@ package mustache {
               } else notCTag
         }
       }
+      state match {
+        case Text => staticText
+        case OTag => { notOTag; staticText }
+        case Tag => fail("Unclosed tag \""+buf.toString+"\"")
+        case CTag => { notCTag; staticText }
+      }
+      stack.foreach {
+        case IncompleteSection(key, inverted) => fail("Unclosed mustache section \""+key+"\"")
+        case _ =>
+      }
+      stack
     }
     private def fail[A](msg:String):A = throw MustacheParseException(line,msg)
 
@@ -208,6 +227,120 @@ package mustache {
         case Some(template) => template.render(context, partials, output)
         case _ => throw new IllegalArgumentException("Partial \""+key+"\" is not defined.")
       }
+  }
+
+  trait ContextHandler {
+
+    private implicit def any2refwrapper(x:Any) =
+      new ReflectionWrapper(x)
+
+    def valueOf(key:String, context:Any):Any =
+      context match {
+        case m : MapLike[String,_,_] =>
+          m.get(key) match {
+            case Some(v) => v
+            case None => None
+          }
+        case any => any.reflection(key) 
+      }
+
+    private class ReflectionWrapper(x:Any) {
+
+      def reflection(key:String):Any = {
+        val w = wrapped
+        (methods(w).get(key), fields(w).get(key)) match {
+          case (Some(m), _) => m.invoke(w, Nil)
+          case (None, Some(f)) => f.get(w)
+          case _ => None
+        }
+      }
+
+      private def fields(w:AnyRef) = Map( 
+        w.getClass().getFields.map(x => {x.getName -> x}):_*
+      )
+
+      private def methods(w:AnyRef) = Map(
+        w.getClass().getMethods
+          .filter(x => { x.getParameterTypes.length == 0 })
+          .map(x => { x.getName -> x }) :_*
+      )
+
+      private def wrapped:AnyRef =
+        x match {
+          case x: Byte => byte2Byte(x)
+          case x: Short => short2Short(x)
+          case x: Char => char2Character(x)
+          case x: Int => int2Integer(x)
+          case x: Long => long2Long(x)
+          case x: Float => float2Float(x)
+          case x: Double => double2Double(x)
+          case x: Boolean => boolean2Boolean(x)
+          case _ => x.asInstanceOf[AnyRef]
+        }
+    }
+  }
+
+  trait ValuesFormatter {
+    @tailrec
+    final def format(value:Any):String =
+      value match {
+        case null => ""
+        case None => ""
+        case Some(v) => format(v)
+        case x => x.toString
+      }
+  }
+
+  case class SectionToken(
+     inverted:Boolean
+    ,key:String
+    ,children:List[Token]
+  ) extends Token with ContextHandler {
+
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+      valueOf(key, context) match {
+        case null if (inverted) => 
+          renderChildren(context, partials, output)
+        case None if (inverted) => 
+          renderChildren(context, partials, output)
+        case b:Boolean if (b^inverted) => 
+          renderChildren(context, partials, output)
+        case s:Seq[_] if(inverted) => 
+          if (s.isEmpty) renderChildren(context, partials, output)
+        case s:Seq[_] if(!inverted) => 
+          s foreach { renderChildren(_, partials, output) }
+        case other => renderChildren(other,partials, output)
+      }
+
+    private def renderChildren(
+       context:Any
+      ,partials:Map[String,Mustache]
+      ,output:StringBuilder
+    ):Unit = children foreach { _.render(context, partials, output) }
+
+  }
+
+  case class UnescapedToken(key:String) 
+    extends Token 
+    with ContextHandler 
+    with ValuesFormatter {
+
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+      output.append(format(valueOf(key,context)))
+  }
+
+  case class EscapedToken(key:String) 
+    extends Token 
+    with ContextHandler 
+    with ValuesFormatter {
+
+    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):Unit =
+      format(valueOf(key,context)).foreach({
+        case '<' => output.append("&lt;")
+        case '>' => output.append("&gt;")
+        case '&' => output.append("&amp;")
+        case c => output.append(c)
+      })
   }
 
   }
