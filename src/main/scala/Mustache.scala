@@ -155,18 +155,18 @@ package mustache {
           @tailrec
           def addSection(
             children:List[Token]
-            ,stack:List[Token]
-          ) : List[Token] = stack.headOption match {
+            ,s:List[Token]
+          ) : List[Token] = s.headOption match {
             case None => fail("Closing unopened section \""+name+"\"")
 
             case Some(IncompleteSection(key, inverted)) 
-              if (key == name) => SectionToken(inverted, name, children.reverse)::stack
+              if (key == name) => SectionToken(inverted, name, children)::s.tail
 
             case Some(IncompleteSection(key, inverted)) 
               if (key != name) => fail("Unclosed section \""+key+"\"")
   
             case Some(other) => 
-              addSection(other::children, stack.tail)
+              addSection(other::children, s.tail)
           }
           stack = addSection(List[Token](), stack)
         }

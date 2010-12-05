@@ -19,7 +19,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
         ,"in_ca" -> true)
       ).toString must be equalTo(
         "Hello Chris\nYou have just won $10000!\n\n"+
-        "Well, $6000, after taxes."
+        "Well, $6000.0, after taxes.\n"
       )
     }
 
