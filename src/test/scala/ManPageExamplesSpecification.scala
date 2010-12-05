@@ -54,7 +54,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
                     ,Map("name"->"rip")
                   )
       )).toString must be equalTo(
-        "\n<b>resque</b>\n\n<b>hub</b>\n\n<b>rip</b>\n"
+        "\n  <b>resque</b>\n\n  <b>hub</b>\n\n  <b>rip</b>\n"
       )
     }
 
@@ -98,7 +98,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
       val partials = Map("user" -> userTemplate)
 
       baseTemplate.render(ctx, partials).toString must be equalTo(
-        "<h2>Names</h2>\n\n<strong>Alice</strong>\n\n<strong>Bob</strong>\n"
+        "<h2>Names</h2>\n\n  <strong>Alice</strong>\n\n  <strong>Bob</strong>\n"
       )
     }
 
