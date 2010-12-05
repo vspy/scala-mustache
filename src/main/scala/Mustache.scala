@@ -40,7 +40,7 @@ package mustache {
       var otag:String
       var ctag:String
       var tagPosition:Int = 0
-      var line:Int = 0
+      var line:Int = 1
       var prev:Char = '\uffff'
       var cur:Char = '\uffff'
       var curlyBraceTag:Boolean = false
@@ -62,14 +62,14 @@ package mustache {
               if(cur == otag.charAt(tagPosition))
                 if (tagPosition == otag.length-1) { staticText; state = Tag }
                 else { tagPosition = tagPosition+1 }
-              else notOTag
+              else { notOTag; buf.append(cur) }
 
             case Tag =>
               if (buf.isEmpty && cur == '{') {
                 curlyBraceTag = true
                 buf.append(cur)
               } else if (curlyBraceTag && cur == '}') {
-                curlyBraceTag = true
+                curlyBraceTag = false
                 buf.append(cur)
               } else if (cur == ctag.charAt(0)) {
                 if (ctag.length > 1) { tagPosition = 1; state = CTag }
@@ -80,7 +80,7 @@ package mustache {
               if (cur == ctag.charAt(tagPosition)) {
                 if (tagPosition == ctag.length-1) tag
                 else { tagPosition = tagPosition+1 }
-              } else notCTag
+              } else { notCTag; buf.append(cur) }
         }
       }
       state match {
@@ -93,7 +93,7 @@ package mustache {
         case IncompleteSection(key, inverted) => fail("Unclosed mustache section \""+key+"\"")
         case _ =>
       }
-      stack
+      stack.reverse
     }
     private def fail[A](msg:String):A = throw MustacheParseException(line,msg)
 
@@ -111,13 +111,11 @@ package mustache {
     }
 
     private def notOTag = { 
-      buf.append(otag.substring(0,tagPosition-1))
-      buf.append(cur)
+      buf.append(otag.substring(0,tagPosition))
       state = Text 
     }
     private def notCTag = { 
-      buf.append(ctag.substring(0,tagPosition-1))
-      buf.append(cur) 
+      buf.append(ctag.substring(0,tagPosition))
       state = Tag
     }
     private def reduce:String = { val r = buf.toString; buf.clear; r }
@@ -134,9 +132,10 @@ package mustache {
     }
 
     private def tag:Unit = {
+      state = Text
       val content = checkContent(reduce)
       def skipFirst = checkContent(content substring 1)
-      def skipBoth = checkContent(content substring(1, content.length-2))
+      def skipBoth = checkContent(content substring(1, content.length-1))
 
       content.charAt(0) match {
         case '!' => // ignore comments
