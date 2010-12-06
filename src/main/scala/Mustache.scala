@@ -48,7 +48,7 @@ package mustache {
 
       val buf = new StringBuilder(8192)
 
-      def parse():List[Token] = {
+      def parse():Token = {
 
         while(consume) {
           state match {
@@ -93,7 +93,10 @@ package mustache {
         case IncompleteSection(key, inverted) => fail("Unclosed mustache section \""+key+"\"")
         case _ =>
       }
-      stack.reverse
+      val result = stack.reverse
+
+      if(result.size == 1) result(0)
+      else RootToken(result)
     }
     private def fail[A](msg:String):A = throw MustacheParseException(line,msg)
 
@@ -191,40 +194,77 @@ package mustache {
    * compiled template
    **/
   trait Mustache {
-    protected val compiledTemplate:List[Token]
+    protected val compiledTemplate:Token
 
     def render(
       context : Any = null
       , partials : Map[String,Mustache] = Map()
-      , output : StringBuilder = new StringBuilder(8192)
-    ) : StringBuilder = {
+    ) : String = product(context, partials).toString
 
-      compiledTemplate.map { _.render(context, partials, output) }
-      output
-
-    }
+    def product(
+      context : Any = null
+      , partials : Map[String,Mustache] = Map()
+    ) : TokenProduct = compiledTemplate.render(context, partials)
   }
 
   // mustache tokens ------------------------------------------
+  trait TokenProduct {
+    val maxLength:Int
+    def write(out:StringBuilder):Unit
+
+    override def toString = {
+      val b = new StringBuilder(maxLength)
+      write(b)
+      b.toString
+    }
+  }
+
+  object EmptyProduct extends TokenProduct {
+    val maxLength = 0 
+    def write(out:StringBuilder):Unit = {}
+  }
 
   trait Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct
+  }
+
+  trait CompositeToken {
+    def composite(tokens:Seq[Token],context:Any, partials:Map[String,Mustache]):TokenProduct = 
+      composite(tokens.map{(_,context)},partials)
+
+    def composite(tasks:Seq[Tuple2[Token,Any]], partials:Map[String,Mustache]):TokenProduct = {
+      val result = tasks.map(t=>{t._1.render(t._2, partials)})
+      val len = result.foldLeft(0)({_+_.maxLength})
+      new TokenProduct {
+        val maxLength = len
+        def write(out:StringBuilder) = result.map{_.write(out)}
+      }
+    }
+  }
+
+  case class RootToken(children:List[Token]) extends Token with CompositeToken {
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct =
+      composite(children, context, partials)
   }
 
   case class IncompleteSection(key:String, inverted:Boolean) extends Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct =
       throw new Exception("Weird thing happened. There is incoplete section in compiled template.")
   }
 
   case class StaticTextToken(staticText:String) extends Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
-      output.append(staticText)
+    private val product = 
+      new TokenProduct {
+        val maxLength = staticText.length
+        def write(out:StringBuilder) = out.append(staticText)
+      }
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct = product   
   }
 
   case class PartialToken(key:String) extends Token {
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct =
       partials.get(key) match {
-        case Some(template) => template.render(context, partials, output)
+        case Some(template) => template.product(context, partials)
         case _ => throw new IllegalArgumentException("Partial \""+key+"\" is not defined.")
       }
   }
@@ -296,38 +336,29 @@ package mustache {
      inverted:Boolean
     ,key:String
     ,children:List[Token]
-  ) extends Token with ContextHandler {
+  ) extends Token with ContextHandler with CompositeToken {
 
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct =
       valueOf(key, context) match {
         case null => 
-          if (inverted) renderChildren(context, partials, output)
-          else output
+          if (inverted) composite(children, context, partials)
+          else EmptyProduct
         case None => 
-          if (inverted) renderChildren(context, partials, output)
-          else output
+          if (inverted) composite(children, context, partials)
+          else EmptyProduct
         case b:Boolean => 
-          if (b^inverted) renderChildren(context, partials, output)
-          else output
+          if (b^inverted) composite(children, context, partials)
+          else EmptyProduct
         case s:Seq[_] if(inverted) => 
-          if (s.isEmpty) renderChildren(context, partials, output)
-          else output
+          if (s.isEmpty) composite(children, context, partials)
+          else EmptyProduct
         case s:Seq[_] if(!inverted) => {
-          s foreach { renderChildren(_, partials, output) }
-          output
+          val tasks = for (element<-s;token<-children) yield (token, element)
+          composite(tasks,partials)
         }
-        case other => renderChildren(other,partials, output)
+        case other => 
+          composite(children, other, partials)
       }
-
-    private def renderChildren(
-       context:Any
-      ,partials:Map[String,Mustache]
-      ,output:StringBuilder
-    ):StringBuilder = {
-      children foreach { _.render(context, partials, output) }
-      output
-    }
-
   }
 
   case class UnescapedToken(key:String) 
@@ -335,8 +366,13 @@ package mustache {
     with ContextHandler 
     with ValuesFormatter {
 
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder =
-      output.append(format(valueOf(key,context)))
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct = {
+      val v = format(valueOf(key,context))
+      new TokenProduct {
+        val maxLength = v.length
+        def write(out:StringBuilder):Unit = {out.append(v)}
+      }
+    }
   }
 
   case class EscapedToken(key:String) 
@@ -344,14 +380,18 @@ package mustache {
     with ContextHandler 
     with ValuesFormatter {
 
-    def render(context:Any, partials:Map[String,Mustache], output:StringBuilder):StringBuilder = {
-      format(valueOf(key,context)).foreach({
-        case '<' => output.append("&lt;")
-        case '>' => output.append("&gt;")
-        case '&' => output.append("&amp;")
-        case c => output.append(c)
-      })
-      output
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct = { 
+      val v = format(valueOf(key,context))
+      new TokenProduct {
+        val maxLength = (v.length*1.2).toInt
+        def write(out:StringBuilder):Unit =
+          v.foreach {
+            case '<' => out.append("&lt;")
+            case '>' => out.append("&gt;")
+            case '&' => out.append("&amp;")
+            case c => out.append(c)
+          }
+      }
     }
   }
 

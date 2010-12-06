@@ -7,7 +7,7 @@ object StaticTextTokenSpecification extends SpecificationWithJUnit {
   "static text token" should {
     "render static text" in {
       StaticTextToken("Hey!").render(
-        null, Map(), new StringBuilder
+        null, Map()
       ).toString must be equalTo("Hey!")
     }
   }

@@ -7,7 +7,7 @@ object EscapedTokenSpecification extends SpecificationWithJUnit {
   "escaped text token" should {
     "render escaped text" in {
       EscapedToken("foo").render(
-        Map("foo"->"<>&test"), Map(), new StringBuilder
+        Map("foo"->"<>&test"), Map()
       ).toString must be equalTo("&lt;&gt;&amp;test")
     }
   }

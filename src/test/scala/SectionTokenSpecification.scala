@@ -13,7 +13,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                       StaticTextToken("bar")
                     )
       ).render(
-        null, Map(), new StringBuilder
+        null, Map()
       ).toString must be equalTo("")
     }
 
@@ -25,10 +25,10 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                   )
 
       token.render(
-        Map("foo"->false), Map(), new StringBuilder
+        Map("foo"->false), Map()
       ).toString must be equalTo("")
       token.render(
-        Map("foo"->true), Map(), new StringBuilder
+        Map("foo"->true), Map()
       ).toString must be equalTo("bar")
     }
 
@@ -43,7 +43,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     )
                   )
       token.render(
-        Map("foo"->List()), Map(), new StringBuilder
+        Map("foo"->List()), Map()
       ).toString must be equalTo("")
       token.render(
         Map("foo"->List(
@@ -51,8 +51,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,Map("value"->2)
                     ,Map("value"->3)
                     ))
-        , Map(), new StringBuilder
-      ).toString must be equalTo("bar:1,bar:2,bar:3,")    
+        , Map()
+      ).toString must be equalTo("bar:1,bar:2,bar:3,")
     }
 
     "handle inverse null conext" in {
@@ -62,7 +62,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                       StaticTextToken("bar")
                     )
       ).render(
-        null, Map(), new StringBuilder
+        null, Map()
       ).toString must be equalTo("bar")
     }
 
@@ -74,10 +74,10 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                   )
 
       token.render(
-        Map("foo"->false), Map(), new StringBuilder
+        Map("foo"->false), Map()
       ).toString must be equalTo("bar")
       token.render(
-        Map("foo"->true), Map(), new StringBuilder
+        Map("foo"->true), Map()
       ).toString must be equalTo("")
     }
 
@@ -88,7 +88,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,List(StaticTextToken("list is empty"))
                   )
       token.render(
-        Map("foo"->List()), Map(), new StringBuilder
+        Map("foo"->List()), Map()
       ).toString must be equalTo("list is empty")
       token.render(
         Map("foo"->List(
@@ -96,7 +96,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,Map("value"->2)
                     ,Map("value"->3)
                     ))
-        , Map(), new StringBuilder
+        , Map()
       ).toString must be equalTo("")
     }
 
