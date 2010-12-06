@@ -271,10 +271,17 @@ package mustache {
 
   trait ContextHandler {
 
-    private implicit def any2refwrapper(x:Any) =
-      new ReflectionWrapper(x)
-
     def valueOf(key:String, context:Any):Any =
+      eval(fromContext(key, context))
+
+    @tailrec
+    private def eval(value:Any):Any =
+      value match {
+        case f:Function0[_] => eval(f())
+        case other => other
+      }
+
+    private def fromContext(key:String, context:Any):Any =
       context match {
         case null => None
         case m : MapLike[String,_,_] =>
@@ -282,43 +289,40 @@ package mustache {
             case Some(v) => v
             case None => None
           }
-        case any => any.reflection(key) 
+        case any => reflection(any, key) 
       }
 
-    private class ReflectionWrapper(x:Any) {
-
-      def reflection(key:String):Any = {
-        val w = wrapped
-        (methods(w).get(key), fields(w).get(key)) match {
-          case (Some(m), _) => m.invoke(w)
-          case (None, Some(f)) => f.get(w)
-          case _ => None
-        }
+    private def reflection(x:Any, key:String):Any = {
+      val w = wrapped(x)
+      (methods(w).get(key), fields(w).get(key)) match {
+        case (Some(m), _) => m.invoke(w)
+        case (None, Some(f)) => f.get(w)
+        case _ => None
       }
-
-      private def fields(w:AnyRef) = Map( 
-        w.getClass().getFields.map(x => {x.getName -> x}):_*
-      )
-
-      private def methods(w:AnyRef) = Map(
-        w.getClass().getMethods
-          .filter(x => { x.getParameterTypes.length == 0 })
-          .map(x => { x.getName -> x }) :_*
-      )
-
-      private def wrapped:AnyRef =
-        x match {
-          case x: Byte => byte2Byte(x)
-          case x: Short => short2Short(x)
-          case x: Char => char2Character(x)
-          case x: Int => int2Integer(x)
-          case x: Long => long2Long(x)
-          case x: Float => float2Float(x)
-          case x: Double => double2Double(x)
-          case x: Boolean => boolean2Boolean(x)
-          case _ => x.asInstanceOf[AnyRef]
-        }
     }
+
+    private def fields(w:AnyRef) = Map( 
+      w.getClass().getFields.map(x => {x.getName -> x}):_*
+    )
+
+    private def methods(w:AnyRef) = Map(
+      w.getClass().getMethods
+        .filter(x => { x.getParameterTypes.length == 0 })
+        .map(x => { x.getName -> x }) :_*
+    )
+
+    private def wrapped(x:Any):AnyRef =
+      x match {
+        case x: Byte => byte2Byte(x)
+        case x: Short => short2Short(x)
+        case x: Char => char2Character(x)
+        case x: Int => int2Integer(x)
+        case x: Long => long2Long(x)
+        case x: Float => float2Float(x)
+        case x: Double => double2Double(x)
+        case x: Boolean => boolean2Boolean(x)
+        case _ => x.asInstanceOf[AnyRef]
+      }
   }
 
   trait ValuesFormatter {

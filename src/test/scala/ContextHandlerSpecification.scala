@@ -1,5 +1,6 @@
 import org.specs._
 import org.specs.runner._
+import scala.actors.Futures._
 
 package mustache {
 object ContextHandlerSpecification extends SpecificationWithJUnit {
@@ -47,6 +48,18 @@ object ContextHandlerSpecification extends SpecificationWithJUnit {
       T.valueOf("n/a", SampleTraitObject) must be equalTo(None)
       T.valueOf("foo", SampleTraitObject) must be equalTo("42")
       T.valueOf("bar", SampleTraitObject) must be equalTo("barValue")
+    }
+
+    "extract values out of the closures" in {
+      T.valueOf("test", Map( "test"-> (()=>{42}) )) must be equalTo(42)
+    }
+
+    "extract values out of the futures" in {
+      T.valueOf("test", Map( "test"-> future{ 42 } )) must be equalTo(42)
+    }
+
+    "extract values out of the nested closures / futures" in {
+      T.valueOf("test", Map( "test"-> future{ ()=>{ 42 } } )) must be equalTo(42)
     }
 
   }
