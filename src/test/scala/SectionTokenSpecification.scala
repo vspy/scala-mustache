@@ -12,6 +12,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,List(
                       StaticTextToken("bar")
                     )
+                    ,"{{"
+                    ,"}}"
       ).render(
         null, Map()
       ).toString must be equalTo("")
@@ -22,6 +24,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     false
                     ,"foo"
                     ,List(StaticTextToken("bar"))
+                    ,"{{"
+                    ,"}}"
                   )
 
       token.render(
@@ -41,6 +45,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                       ,EscapedToken("value")
                       ,StaticTextToken(",")
                     )
+                    ,"{{"
+                    ,"}}"
                   )
       token.render(
         Map("foo"->List()), Map()
@@ -61,6 +67,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,List(
                       StaticTextToken("bar")
                     )
+                    ,"{{"
+                    ,"}}"
       ).render(
         null, Map()
       ).toString must be equalTo("bar")
@@ -71,6 +79,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     true
                     ,"foo"
                     ,List(StaticTextToken("bar"))
+                    ,"{{"
+                    ,"}}"
                   )
 
       token.render(
@@ -86,6 +96,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     true
                     ,"foo"
                     ,List(StaticTextToken("list is empty"))
+                    ,"{{"
+                    ,"}}"
                   )
       token.render(
         Map("foo"->List()), Map()

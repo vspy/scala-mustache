@@ -163,7 +163,7 @@ package mustache {
             case None => fail("Closing unopened section \""+name+"\"")
 
             case Some(IncompleteSection(key, inverted)) 
-              if (key == name) => SectionToken(inverted, name, children)::s.tail
+              if (key == name) => SectionToken(inverted, name, children, otag, ctag)::s.tail
 
             case Some(IncompleteSection(key, inverted)) 
               if (key != name) => fail("Unclosed section \""+key+"\"")
@@ -258,7 +258,7 @@ package mustache {
         val maxLength = staticText.length
         def write(out:StringBuilder) = out.append(staticText)
       }
-    def render(context:Any, partials:Map[String,Mustache]):TokenProduct = product   
+    def render(context:Any, partials:Map[String,Mustache]):TokenProduct = product
   }
 
   case class PartialToken(key:String) extends Token {
@@ -340,7 +340,10 @@ package mustache {
      inverted:Boolean
     ,key:String
     ,children:List[Token]
+    ,otag:String
+    ,ctag:String
   ) extends Token with ContextHandler with CompositeToken {
+    val childrenString = children.map(_.toString).mkString
 
     def render(context:Any, partials:Map[String,Mustache]):TokenProduct =
       valueOf(key, context) match {
@@ -360,6 +363,16 @@ package mustache {
           val tasks = for (element<-s;token<-children) yield (token, element)
           composite(tasks,partials)
         }
+        case m:MapLike[_,_,_] => // because Map[String,_] can be cast to Function[String,_]
+          composite(children, m, partials)
+
+        case fn:Function1[String,_] => {
+          println("fn is "+fn)
+          new TokenProduct {
+            val maxLength = (childrenString.length*1.2).toInt // this is just an estimate
+            def write(out:StringBuilder) = out.append(fn(childrenString))
+          }
+        } 
         case other => 
           composite(children, other, partials)
       }

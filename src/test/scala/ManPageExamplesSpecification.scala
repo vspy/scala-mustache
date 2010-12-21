@@ -5,7 +5,7 @@ import org.specs.runner._
 package mustache {
 object ManPageExamplesSpecification extends SpecificationWithJUnit {
 
-  "mutache" should {
+  "mustache" should {
 
     "render typical template from man page" in {
       Mustache(
