@@ -8,7 +8,7 @@ object ParserSpecification extends SpecificationWithJUnit {
   "parser" should {
 
     "handle static text only" in {
-      Mustache(
+      new Mustache(
         "Hello, world!"
       ).render().toString must be equalTo(
         "Hello, world!"
@@ -16,7 +16,7 @@ object ParserSpecification extends SpecificationWithJUnit {
     }
 
     "handle simple values" in {
-      Mustache(
+      new Mustache(
         "Hello, {{name}}!"
       ).render(
         Map("name"->"world")
@@ -26,7 +26,7 @@ object ParserSpecification extends SpecificationWithJUnit {
     }
   
     "handle escaping properly" in {
-      Mustache(
+      new Mustache(
         "Hello, {{name}}!"
       ).render(
         Map("name"->"<tag>")
@@ -36,7 +36,7 @@ object ParserSpecification extends SpecificationWithJUnit {
     }
 
     "handle unescaped values" in {
-      Mustache(
+      new Mustache(
         "Hello, {{{name}}}!"
       ).render(
         Map("name"->"<tag>")
@@ -46,7 +46,7 @@ object ParserSpecification extends SpecificationWithJUnit {
     }
 
     "handle unescaped tags with &" in {
-      Mustache(
+      new Mustache(
         "Hello, {{&name}}!"
       ).render(
         Map("name"->"<tag>")
@@ -57,16 +57,16 @@ object ParserSpecification extends SpecificationWithJUnit {
 
     "report error for unbalanced braces in {{{ }}}" in {
       // unbalanced { inside the tag
-      Mustache("Hello, {{{name}}!") must throwA[MustacheParseException]
+      new Mustache("Hello, {{{name}}!") must throwA[MustacheParseException]
     }
 
     "ignore incomplete tags" in {
-      Mustache(
+      new Mustache(
         "{ { {"
       ).render().toString must be equalTo(
         "{ { {"
       )
-      Mustache(
+      new Mustache(
         "} }} }"
       ).render().toString must be equalTo(
         "} }} }"
@@ -74,12 +74,12 @@ object ParserSpecification extends SpecificationWithJUnit {
     }
 
     "report error for empty tag" in {
-      Mustache("{{{}}}") must throwA[MustacheParseException]
-      Mustache("{{}}") must throwA[MustacheParseException]
+      new Mustache("{{{}}}") must throwA[MustacheParseException]
+      new Mustache("{{}}") must throwA[MustacheParseException]
     }
 
     "handle sections" in {
-      Mustache(
+      new Mustache(
         "Message: {{#needToGreet}}Hello, {{name}}!{{/needToGreet}}"
       ).render(
         Map("needToGreet"->true, "name"->"world")
@@ -87,7 +87,7 @@ object ParserSpecification extends SpecificationWithJUnit {
         "Message: Hello, world!"
       )
 
-      Mustache(
+      new Mustache(
         "Message: {{#needToGreet}}Hello, {{name}}!{{/needToGreet}}"
       ).render(
         Map("needToGreet"->false, "name"->"world")
@@ -97,7 +97,7 @@ object ParserSpecification extends SpecificationWithJUnit {
     }
 
     "handle nested sections" in {
-      Mustache(
+      new Mustache(
         "{{#foo}}>>{{#bar}}Hello, {{name}}!{{/bar}}<<{{/foo}}"
       ).render(
         Map("foo"->Map("bar"->Map("name"->"world")))
@@ -107,33 +107,33 @@ object ParserSpecification extends SpecificationWithJUnit {
     }
 
     "report error for unclosed section" in {
-      Mustache("some text {{#foo}} some internal text") must throwA[MustacheParseException]
+      new Mustache("some text {{#foo}} some internal text") must throwA[MustacheParseException]
     }
 
     "report error for unclosed tag" in {
-      Mustache("some text {{unclosed tag") must throwA[MustacheParseException]
+      new Mustache("some text {{unclosed tag") must throwA[MustacheParseException]
     }
 
     "report error for messed up sections" in {
-      Mustache("text {{#foo}} {{#bar}} txt {{/foo}} {{/bar}}") must throwA[MustacheParseException]
+      new Mustache("text {{#foo}} {{#bar}} txt {{/foo}} {{/bar}}") must throwA[MustacheParseException]
     }
 
     "report error for invalid delimiter tag" in {
-      Mustache("some text {{=}} some text") must throwA[MustacheParseException]
-      Mustache("some text {{==}} some text") must throwA[MustacheParseException]
-      Mustache("some text {{= foo =}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{=}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{==}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{= foo =}} some text") must throwA[MustacheParseException]
     }
 
     "report error for invalid tags" in {
-      Mustache("some text {{>}} some text") must throwA[MustacheParseException]
-      Mustache("some text {{<}} some text") must throwA[MustacheParseException]
-      Mustache("some text {{&}} some text") must throwA[MustacheParseException]
-      Mustache("some text {{^}}...{{/}} some text") must throwA[MustacheParseException]
-      Mustache("some text {{#}}...{{/}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{>}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{<}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{&}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{^}}...{{/}} some text") must throwA[MustacheParseException]
+      new Mustache("some text {{#}}...{{/}} some text") must throwA[MustacheParseException]
     }
 
     "report lines properly" in {
-      Mustache(
+      new Mustache(
         "some text\nand some more\n{{>}}\nsome text again"
       ) must throwA(MustacheParseException(3, "Empty tag"))
     }

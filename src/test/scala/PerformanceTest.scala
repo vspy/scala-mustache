@@ -46,7 +46,7 @@ object PerformanceTest {
     }
 
   private def test(filename:String, ctx:Any) = {
-    val template = Mustache(Source.fromInputStream(getClass().getResourceAsStream(filename)))
+    val template = new Mustache(Source.fromInputStream(getClass().getResourceAsStream(filename)))
     val t1 = System.currentTimeMillis
     for (i <- 0 until 100000) { template.render(ctx) }
     val t2 = System.currentTimeMillis

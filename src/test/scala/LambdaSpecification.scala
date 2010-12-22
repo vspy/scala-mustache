@@ -8,7 +8,7 @@ object LambdaSpecification extends SpecificationWithJUnit {
   "mustache" should {
 
     "render values returned by no-args functions" in {
-      Mustache(
+      new Mustache(
         "{{value}}"
       ).render(Map(
         "value"->(()=>{"hey!"})
@@ -16,7 +16,7 @@ object LambdaSpecification extends SpecificationWithJUnit {
     }
 
     "render values returned by functions with string arg" in {
-      Mustache(
+      new Mustache(
         "{{#bold}}some text{{/bold}}"
       ).render(Map(
         "bold"->((str:String)=>{ "<b>"+str+"</b>" })
@@ -24,7 +24,7 @@ object LambdaSpecification extends SpecificationWithJUnit {
     }
 
     "render values returned by functions with render param" in {
-      Mustache(
+      new Mustache(
         "{{#bold}}Hello, {{name}}!{{/bold}}"
       ).render(Map(
         "name"-> "world"
@@ -33,7 +33,7 @@ object LambdaSpecification extends SpecificationWithJUnit {
     }
 
     "correctly remember open and close tags when rendering dynamic templates" in {
-      Mustache(
+      new Mustache(
         "{{= ** ** =}}**#bold**Hello,**=< >=** <name>!<=__ __=>__/bold__"
       ).render(Map(
         "name"-> "world"

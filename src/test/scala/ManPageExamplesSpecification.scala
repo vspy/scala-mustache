@@ -8,7 +8,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
   "mustache" should {
 
     "render typical template from man page" in {
-      Mustache(
+      new Mustache(
         "Hello {{name}}\nYou have just won ${{value}}!\n"+
         "{{#in_ca}}\nWell, ${{taxed_value}}, after taxes.\n"+
         "{{/in_ca}}")
@@ -24,7 +24,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render variables example from man page" in {
-      Mustache(
+      new Mustache(
         "* {{name}}\n* {{age}}\n* {{company}}\n* {{{company}}}"
       ).render(Map(
         "name"->"Chris"
@@ -35,7 +35,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render section example from man page" in {
-      Mustache(
+      new Mustache(
         "Shown.\n{{#nothin}}\nNever shown!\n{{/nothin}}"
       ).render(Map(
         "person" -> true
@@ -45,7 +45,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render section list example from man page" in {
-      Mustache(
+      new Mustache(
         "{{#repo}}\n  <b>{{name}}</b>\n{{/repo}}"
       ).render(Map(
         "repo" -> List(
@@ -59,7 +59,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render section non-false example from man page" in {
-      Mustache(
+      new Mustache(
         "{{#person?}}Hi {{name}}!{{/person?}}"
       ).render(Map(
         "person?" -> Map("name"->"John")
@@ -69,7 +69,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render inverted section example from man page" in {
-      Mustache(
+      new Mustache(
         "{{#repo}}<b>{{name}}</b>{{/repo}}{{^repo}}No repos :({{/repo}}"
       ).render(Map(
         "repo" -> Nil
@@ -79,7 +79,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render comments example from man page" in {
-      Mustache(
+      new Mustache(
         "<h1>Today{{! ignore me }}.</h1>"
       ).render().toString must be equalTo(
         "<h1>Today.</h1>"
@@ -87,8 +87,8 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render partials example from man page" in {
-      val userTemplate = Mustache("<strong>{{name}}</strong>")
-      val baseTemplate = Mustache(
+      val userTemplate = new Mustache("<strong>{{name}}</strong>")
+      val baseTemplate = new Mustache(
         "<h2>Names</h2>\n{{#names}}\n  {{> user}}\n{{/names}}"
       )
       val ctx = Map("names"->List(
@@ -103,7 +103,7 @@ object ManPageExamplesSpecification extends SpecificationWithJUnit {
     }
 
     "render delimiters example from man page" in {
-      Mustache(
+      new Mustache(
         "* {{default_tags}}\n{{=<% %>=}}\n* <% erb_style_tags %>\n"+
         "<%={{ }}=%>\n* {{ default_tags_again }}"
       ).render(Map(

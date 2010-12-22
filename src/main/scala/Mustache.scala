@@ -8,85 +8,137 @@ package mustache {
   case class MustacheParseException(line:Int, msg:String) 
     extends Exception("Line "+line+": "+msg)
 
-  object Mustache {
+  /**
+   * view helper trait 
+   **/
+  trait MustacheHelperSupport {
+    protected def context:Any
+    protected def render(template:String):Any
+  }
 
-    def apply(
-        str:String
-      ):Mustache = apply(Source.fromString(str))
+  /**
+   * template
+   **/
+  class Mustache(
+    root: Token
+  ) extends MustacheHelperSupport 
+  {
 
-    def apply(
+    def this (source:Source
+              , open:String = "{{"
+              , close:String = "}}") =
+      this((new Parser{
+          val src = source
+          var otag = open
+          var ctag = close
+      }).parse)
+
+    def this(str:String) = this(Source.fromString(str))
+
+    def this(
         str:String
       , open:String 
       , close:String
-      ):Mustache = apply(Source.fromString(str), open, close)
+      ) = this(Source.fromString(str), open, close)
 
-    def apply(
-        source:Source
-      , open:String = "{{"
-      , close:String = "}}"
-      ):Mustache = new Mustache { 
-            val compiledTemplate = 
-              (new Parser{
-                val src = source
-                var otag = open
-                var ctag = close
-              }).parse 
-          }
+    private val compiledTemplate = root
 
-    private class ParserState
-    private object Text extends ParserState
-    private object OTag extends ParserState
-    private object Tag  extends ParserState
-    private object CTag extends ParserState
+    val globals:Map[String,Any] = 
+      {
+        val excludedGlobals = List("wait","toString","hashCode","getClass","notify","notifyAll")
+        Map( 
+          (this.getClass().getMethods
+            .filter(x => {
+              val name = x.getName 
+              val pt = x.getParameterTypes
+              ( !name.startsWith("render$default")
+              ) && (
+                !name.startsWith("product$default")
+              ) && (
+                !name.startsWith("init$default")
+              ) && (
+                !excludedGlobals.contains(name)
+              ) && ((
+                pt.length == 0
+              ) || (
+                pt.length == 1 
+                && pt(0) == classOf[String]
+              ))
+            })
+            .map( x=>{x.getName->x})) : _*
+          )
+        }
 
-    private abstract class Parser {
-      val src:Source
+    def render(
+      context : Any = null
+      , partials : Map[String,Mustache] = Map()
+      , parent : Option[Mustache] = None
+    ) : String = product(context, partials).toString
 
-      var state:ParserState = Text
-      var otag:String
-      var ctag:String
-      var tagPosition:Int = 0
-      var line:Int = 1
-      var prev:Char = '\uffff'
-      var cur:Char = '\uffff'
-      var curlyBraceTag:Boolean = false
-      var stack:List[Token] = List()
+    def product(
+      context : Any = null
+      , partials : Map[String,Mustache] = Map()
+      , parent : Option[Mustache] = None
+    ) : TokenProduct = compiledTemplate.render(context, partials)
 
-      val buf = new StringBuilder(8192)
+    protected def context = null
+    protected def render(str:String) = ""
+  }
 
-      def parse():Token = {
+  private class ParserState
+  private object Text extends ParserState
+  private object OTag extends ParserState
+  private object Tag  extends ParserState
+  private object CTag extends ParserState
 
-        while(consume) {
-          state match {
-            case Text =>
-              if (cur == otag.charAt(0))
-                if (otag.length > 1) { tagPosition = 1; state = OTag } 
-                else { staticText; state = Tag }
-              else buf.append(cur)
+  private abstract class Parser {
+    val src:Source
 
-            case OTag =>
-              if(cur == otag.charAt(tagPosition))
-                if (tagPosition == otag.length-1) { staticText; state = Tag }
-                else { tagPosition = tagPosition+1 }
-              else { notOTag; buf.append(cur) }
+    var state:ParserState = Text
+    var otag:String
+    var ctag:String
+    var tagPosition:Int = 0
+    var line:Int = 1
+    var prev:Char = '\uffff'
+    var cur:Char = '\uffff'
+    var curlyBraceTag:Boolean = false
+    var stack:List[Token] = List()
 
-            case Tag =>
-              if (buf.isEmpty && cur == '{') {
-                curlyBraceTag = true
-                buf.append(cur)
-              } else if (curlyBraceTag && cur == '}') {
-                curlyBraceTag = false
-                buf.append(cur)
-              } else if (cur == ctag.charAt(0)) {
-                if (ctag.length > 1) { tagPosition = 1; state = CTag }
-                else tag
-              } else buf.append(cur)
+    val buf = new StringBuilder(8192)
 
-            case CTag =>
-              if (cur == ctag.charAt(tagPosition)) {
-                if (tagPosition == ctag.length-1) tag
-                else { tagPosition = tagPosition+1 }
-              } else { notCTag; buf.append(cur) }
+    def parse():Token = {
+
+      while(consume) {
+        state match {
+          case Text =>
+            if (cur == otag.charAt(0))
+              if (otag.length > 1) { tagPosition = 1; state = OTag } 
+              else { staticText; state = Tag }
+            else buf.append(cur)
+
+          case OTag =>
+            if(cur == otag.charAt(tagPosition))
+              if (tagPosition == otag.length-1) { staticText; state = Tag }
+              else { tagPosition = tagPosition+1 }
+            else { notOTag; buf.append(cur) }
+
+          case Tag =>
+            if (buf.isEmpty && cur == '{') {
+              curlyBraceTag = true
+              buf.append(cur)
+            } else if (curlyBraceTag && cur == '}') {
+              curlyBraceTag = false
+              buf.append(cur)
+            } else if (cur == ctag.charAt(0)) {
+              if (ctag.length > 1) { tagPosition = 1; state = CTag }
+              else tag
+            } else buf.append(cur)
+
+          case CTag =>
+            if (cur == ctag.charAt(tagPosition)) {
+              if (tagPosition == ctag.length-1) tag
+              else { tagPosition = tagPosition+1 }
+            } else { notCTag; buf.append(cur) }
         }
       }
       state match {
@@ -104,6 +156,7 @@ package mustache {
       if(result.size == 1) result(0)
       else RootToken(result)
     }
+
     private def fail[A](msg:String):A = throw MustacheParseException(line,msg)
 
     private def consume = {
@@ -113,8 +166,8 @@ package mustache {
         cur = src.next
         // \n, \r\n, \r
         if ( cur == '\r' ||
-             ( cur == '\n' && prev != '\r' ) 
-           ) line = line+1
+              ( cur == '\n' && prev != '\r' ) 
+            ) line = line+1
         true
       } else false
     }
@@ -181,7 +234,7 @@ package mustache {
 
             case Some(IncompleteSection(key, inverted,_,_)) 
               if (key != name) => fail("Unclosed section \""+key+"\"")
-  
+
             case Some(other) => 
               addSection(other::children, s.tail)
           }
@@ -204,24 +257,6 @@ package mustache {
         case _ => stack = EscapedToken(content, otag, ctag)::stack
       }
     }
-  }
-  }
-
-  /**
-   * compiled template
-   **/
-  trait Mustache {
-    protected val compiledTemplate:Token
-
-    def render(
-      context : Any = null
-      , partials : Map[String,Mustache] = Map()
-    ) : String = product(context, partials).toString
-
-    def product(
-      context : Any = null
-      , partials : Map[String,Mustache] = Map()
-    ) : TokenProduct = compiledTemplate.render(context, partials)
   }
 
   // mustache tokens ------------------------------------------
@@ -395,7 +430,7 @@ package mustache {
     private val childrenTemplate = {
       val root = if(children.size == 1) children(0)
                   else RootToken(children)
-      new Mustache { protected val compiledTemplate = root }
+      new Mustache( root )
     }
 
     def render(context:Any, partials:Map[String,Mustache]):TokenProduct =
@@ -446,7 +481,7 @@ package mustache {
       if (template == childrenSource)
         childrenTemplate.render(context, partials)
       else 
-        Mustache(template, startOTag, startCTag).render(context, partials)
+        (new Mustache(template, startOTag, startCTag)).render(context, partials)
 
     def templateSource:String = source
   }
