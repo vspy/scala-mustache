@@ -483,6 +483,7 @@ package mustache {
             case '<' => out.append("&lt;")
             case '>' => out.append("&gt;")
             case '&' => out.append("&amp;")
+            case '"' => out.append("&quot;")
             case c => out.append(c)
           }
       }
