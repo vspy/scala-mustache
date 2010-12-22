@@ -32,6 +32,15 @@ object LambdaSpecification extends SpecificationWithJUnit {
       )).toString must be equalTo("<b>Hello, world!</b>")
     }
 
+    "correctly remember open and close tags when rendering dynamic templates" in {
+      Mustache(
+        "{{= ** ** =}}**#bold**Hello,**=< >=** <name>!<=__ __=>__/bold__"
+      ).render(Map(
+        "name"-> "world"
+        ,"bold"->((str:String, render:(String)=>String)=>{ "<b>"+render(" "+str+" ")+"</b>" })
+      )).toString must be equalTo("<b> Hello, world! </b>")
+    }
+
   }
 
 }

@@ -14,8 +14,25 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     )
                     ,"{{"
                     ,"}}"
+                    ,"{{"
+                    ,"}}"
       ).render(
         null, Map()
+      ).toString must be equalTo("")
+    }
+
+    "not render children with None context" in {
+      SectionToken(false
+                    ,"foo"
+                    ,List(
+                      StaticTextToken("bar")
+                    )
+                    ,"{{"
+                    ,"}}"
+                    ,"{{"
+                    ,"}}"
+      ).render(
+        None, Map()
       ).toString must be equalTo("")
     }
 
@@ -24,6 +41,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     false
                     ,"foo"
                     ,List(StaticTextToken("bar"))
+                    ,"{{"
+                    ,"}}"
                     ,"{{"
                     ,"}}"
                   )
@@ -42,9 +61,11 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,"foo"
                     ,List(
                       StaticTextToken("bar:")
-                      ,EscapedToken("value")
+                      ,EscapedToken("value","{{","}}")
                       ,StaticTextToken(",")
                     )
+                    ,"{{"
+                    ,"}}"
                     ,"{{"
                     ,"}}"
                   )
@@ -69,6 +90,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     )
                     ,"{{"
                     ,"}}"
+                    ,"{{"
+                    ,"}}"
       ).render(
         null, Map()
       ).toString must be equalTo("bar")
@@ -79,6 +102,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     true
                     ,"foo"
                     ,List(StaticTextToken("bar"))
+                    ,"{{"
+                    ,"}}"
                     ,"{{"
                     ,"}}"
                   )
@@ -96,6 +121,8 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     true
                     ,"foo"
                     ,List(StaticTextToken("list is empty"))
+                    ,"{{"
+                    ,"}}"
                     ,"{{"
                     ,"}}"
                   )
