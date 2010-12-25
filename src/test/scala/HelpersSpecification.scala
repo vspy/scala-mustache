@@ -56,17 +56,17 @@ object HelperSpecification extends SpecificationWithJUnit {
       new GravatarMustacheExample(true,
       "<ul>" +
         "{{# users}}" +
-          "<li><img src=\"{{ gravatar }}\"> {{ login }}</li>" +
+          "<li><img src=\"{{ gravatar }}\">{{ login }}</li>" +
         "{{/ users}}" +
       "</ul>"
       ).render(Map(
         "users"->List(
             Map("email"->"alice@example.org"
-                ,"lagin"->"alice")
+                ,"login"->"alice")
             ,Map("email"->"bob@example.org"
-                ,"lagin"->"bob")
+                ,"login"->"bob")
         )
-      )).toString must be equalTo("hey!")
+      )).toString must be equalTo("""<ul><li><img src="https://secure.gravatar.com/avatar/fbf7c6aec1d4280b7c2704c1c0478bd6?s=30">alice</li><li><img src="https://secure.gravatar.com/avatar/10ac39056a4b6f1f6804d724518ff2dc?s=30">bob</li></ul>""")
     }
 
   }

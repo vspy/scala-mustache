@@ -290,6 +290,12 @@ package mustache {
     def write(out:StringBuilder):Unit = {}
   }
 
+  case class StringProduct(str:String) extends TokenProduct {
+    val maxLength = str.length 
+    def write(out:StringBuilder):Unit = out.append(str)
+  }
+
+
   trait Token {
     def render(context:Any
           , partials:Map[String,Mustache]
@@ -337,11 +343,8 @@ package mustache {
   }
 
   case class StaticTextToken(staticText:String) extends Token {
-    private val product = 
-      new TokenProduct {
-        val maxLength = staticText.length
-        def write(out:StringBuilder) = out.append(staticText)
-      }
+    private val product = StringProduct(staticText)
+
     def render(context:Any
           , partials:Map[String,Mustache]
           , template:Mustache):TokenProduct = product
@@ -527,6 +530,8 @@ package mustache {
           val tasks = for (element<-s;token<-children) yield (token, element)
           composite(tasks, partials, template)
         }
+        case str:String => StringProduct(str)
+
         case other => 
           composite(children, other, partials, template)
       }
