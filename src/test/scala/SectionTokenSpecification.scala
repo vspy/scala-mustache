@@ -4,6 +4,8 @@ import org.specs.runner._
 package mustache {
 object SectionTokenSpecification extends SpecificationWithJUnit {
 
+  object SampleTemplate extends Mustache("")
+
   "section token" should {
 
     "not render children with null context" in {
@@ -17,7 +19,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,"{{"
                     ,"}}"
       ).render(
-        null, Map()
+        null, Map(), SampleTemplate
       ).toString must be equalTo("")
     }
 
@@ -32,7 +34,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,"{{"
                     ,"}}"
       ).render(
-        None, Map()
+        None, Map(), SampleTemplate
       ).toString must be equalTo("")
     }
 
@@ -48,10 +50,10 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                   )
 
       token.render(
-        Map("foo"->false), Map()
+        Map("foo"->false), Map(), SampleTemplate
       ).toString must be equalTo("")
       token.render(
-        Map("foo"->true), Map()
+        Map("foo"->true), Map(), SampleTemplate
       ).toString must be equalTo("bar")
     }
 
@@ -70,7 +72,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,"}}"
                   )
       token.render(
-        Map("foo"->List()), Map()
+        Map("foo"->List()), Map(), SampleTemplate
       ).toString must be equalTo("")
       token.render(
         Map("foo"->List(
@@ -78,7 +80,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,Map("value"->2)
                     ,Map("value"->3)
                     ))
-        , Map()
+        , Map(), SampleTemplate
       ).toString must be equalTo("bar:1,bar:2,bar:3,")
     }
 
@@ -93,7 +95,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,"{{"
                     ,"}}"
       ).render(
-        null, Map()
+        null, Map(), SampleTemplate
       ).toString must be equalTo("bar")
     }
 
@@ -109,10 +111,10 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                   )
 
       token.render(
-        Map("foo"->false), Map()
+        Map("foo"->false), Map(), SampleTemplate
       ).toString must be equalTo("bar")
       token.render(
-        Map("foo"->true), Map()
+        Map("foo"->true), Map(), SampleTemplate
       ).toString must be equalTo("")
     }
 
@@ -127,7 +129,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,"}}"
                   )
       token.render(
-        Map("foo"->List()), Map()
+        Map("foo"->List()), Map(), SampleTemplate
       ).toString must be equalTo("list is empty")
       token.render(
         Map("foo"->List(
@@ -135,7 +137,7 @@ object SectionTokenSpecification extends SpecificationWithJUnit {
                     ,Map("value"->2)
                     ,Map("value"->3)
                     ))
-        , Map()
+        , Map(), SampleTemplate
       ).toString must be equalTo("")
     }
 

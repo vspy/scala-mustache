@@ -4,10 +4,12 @@ import org.specs.runner._
 package mustache {
 object EscapedTokenSpecification extends SpecificationWithJUnit {
 
+  object SampleTemplate extends Mustache("")
+
   "escaped text token" should {
     "render escaped text" in {
       EscapedToken("foo","{{","}}").render(
-        Map("foo"->"\"<>&test\""), Map()
+        Map("foo"->"\"<>&test\""), Map(), SampleTemplate
       ).toString must be equalTo("&quot;&lt;&gt;&amp;test&quot;")
     }
   }
