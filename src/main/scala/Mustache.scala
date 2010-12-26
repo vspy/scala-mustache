@@ -89,14 +89,14 @@ package mustache {
     def render(
       context : Any = null
       , partials : Map[String,Mustache] = Map()
-      , parent : Option[Mustache] = None
-    ) : String = product(context, partials).toString
+      , callstack : List[Mustache] = List(this)
+    ) : String = product(context, partials, callstack).toString
 
     def product(
       context : Any = null
       , partials : Map[String,Mustache] = Map()
-      , parent : Option[Mustache] = None
-    ) : TokenProduct = compiledTemplate.render(context, partials, this)
+      , callstack : List[Mustache] = List(this)
+    ) : TokenProduct = compiledTemplate.render(context, partials, callstack)
 
   }
 
@@ -299,23 +299,23 @@ package mustache {
   trait Token {
     def render(context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct
+          , callstack:List[Mustache]):TokenProduct
     def templateSource:String
   }
 
   trait CompositeToken {
     def composite(
-          tokens:Seq[Token]
+          tokens:List[Token]
           , context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct = 
-      composite(tokens.map{(_,context)},partials, template)
+          , callstack:List[Mustache]):TokenProduct = 
+      composite(tokens.map{(_,context)},partials, callstack)
 
     def composite(
           tasks:Seq[Tuple2[Token,Any]]
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct = {
-      val result = tasks.map(t=>{t._1.render(t._2, partials, template)})
+          , callstack:List[Mustache]):TokenProduct = {
+      val result = tasks.map(t=>{t._1.render(t._2, partials, callstack)})
       val len = result.foldLeft(0)({_+_.maxLength})
       new TokenProduct {
         val maxLength = len
@@ -327,14 +327,14 @@ package mustache {
   case class RootToken(children:List[Token]) extends Token with CompositeToken {
     private val childrenSource = children.map(_.templateSource).mkString
 
-    def render(context:Any, partials:Map[String,Mustache], template:Mustache):TokenProduct =
-      composite(children, context, partials, template)
+    def render(context:Any, partials:Map[String,Mustache], callstack:List[Mustache]):TokenProduct =
+      composite(children, context, partials, callstack)
 
     def templateSource:String = childrenSource
   }
 
   case class IncompleteSection(key:String, inverted:Boolean, otag:String, ctag:String) extends Token {
-    def render(context:Any, partials:Map[String,Mustache], template:Mustache):TokenProduct = fail
+    def render(context:Any, partials:Map[String,Mustache], callstack:List[Mustache]):TokenProduct = fail
     def templateSource:String = fail
 
     private def fail = 
@@ -347,7 +347,7 @@ package mustache {
 
     def render(context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct = product
+          , callstack:List[Mustache]):TokenProduct = product
 
     def templateSource:String = staticText
 
@@ -360,7 +360,7 @@ package mustache {
 
     def render(context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct = EmptyProduct 
+          , callstack:List[Mustache]):TokenProduct = EmptyProduct 
 
     def templateSource:String = source
 
@@ -369,9 +369,9 @@ package mustache {
   case class PartialToken(key:String, otag:String, ctag:String) extends Token {
     def render(context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct =
+          , callstack:List[Mustache]):TokenProduct =
       partials.get(key) match {
-        case Some(template) => template.product(context, partials)
+        case Some(template) => template.product(context, partials, template::callstack)
         case _ => throw new IllegalArgumentException("Partial \""+key+"\" is not defined.")
       }
     def templateSource:String = otag+">"+key+ctag
@@ -381,25 +381,26 @@ package mustache {
 
     protected def defaultRender(
                     otag:String
-                    , ctag:String  
-    ):(Any,Map[String,Mustache])=>(String)=>String = 
-      (context:Any, partials:Map[String,Mustache])=>(str:String)=>{
-        (new Mustache(str, otag, ctag)
-        ).render(context, partials)
+                    , ctag:String 
+    ):(Any,Map[String,Mustache],List[Mustache])=>(String)=>String = 
+      (context:Any, partials:Map[String,Mustache],callstack:List[Mustache])=>(str:String)=>{
+        val t = new Mustache(str, otag, ctag)
+        t.render(context, partials, callstack)
       }
 
     def valueOf(key:String
         , context:Any
         , partials:Map[String,Mustache]
-        , template:Mustache
+        , callstack:List[Mustache]
         , childrenString:String
-        , render: (Any, Map[String, Mustache])=>(String)=>String
+        , render: (Any, Map[String, Mustache],List[Mustache])=>(String)=>String
     ):Any = {
-      val r = render(context, partials)
-      template.withContextAndRenderFn(context, r){
-        eval(fromContext(key, context, template)
-              , childrenString, r)
-      }
+      val r = render(context, partials, callstack)
+
+      val wrappedEval = 
+        callstack.foldLeft(()=>{ eval(fromContext(key, context, callstack)
+              , childrenString, r) })( (f,e)=>{ ()=>{e.withContextAndRenderFn(context,r)(f())} } )
+      wrappedEval()
     }
 
     @tailrec
@@ -425,7 +426,7 @@ package mustache {
         case other => other
       }
 
-    private def fromContext(key:String, context:Any, template:Mustache):Any =
+    private def fromContext(key:String, context:Any, callstack:List[Mustache]):Any =
       (context match {
         case null => None
         case m : MapLike[String,_,_] =>
@@ -434,9 +435,20 @@ package mustache {
             case None => None
           }
         case any => reflection(any, key) 
-      }, template.globals.get(key)) match {
-        case (None, Some(x)) => x
-        case (x,_) => x
+      }) match {
+          case None => findInCallStack(callstack, key)
+          case x => x
+        }
+
+    @tailrec
+    private def findInCallStack(callstack:List[Mustache], key:String):Any =
+      callstack.headOption match {
+        case None => None
+        case Some(head) =>
+          head.globals.get(key) match {
+            case Some(x) => x
+            case None => findInCallStack(callstack.tail, key)
+          }
       }
 
     private def reflection(x:Any, key:String):Any = {
@@ -506,43 +518,48 @@ package mustache {
 
     def render(context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct =
+          , callstack:List[Mustache]):TokenProduct =
       valueOf(key
               , context
               , partials
-              , template
+              , callstack
               , childrenSource
               , renderContent
       ) match {
         case null => 
-          if (inverted) composite(children, context, partials, template)
+          if (inverted) composite(children, context, partials, callstack)
           else EmptyProduct
         case None => 
-          if (inverted) composite(children, context, partials, template)
+          if (inverted) composite(children, context, partials, callstack)
           else EmptyProduct
         case b:Boolean => 
-          if (b^inverted) composite(children, context, partials, template)
+          if (b^inverted) composite(children, context, partials, callstack)
           else EmptyProduct
         case s:Seq[_] if(inverted) => 
-          if (s.isEmpty) composite(children, context, partials, template)
+          if (s.isEmpty) composite(children, context, partials, callstack)
           else EmptyProduct
         case s:Seq[_] if(!inverted) => {
           val tasks = for (element<-s;token<-children) yield (token, element)
-          composite(tasks, partials, template)
+          composite(tasks, partials, callstack)
         }
         case str:String => StringProduct(str)
 
         case other => 
-          composite(children, other, partials, template)
+          composite(children, other, partials, callstack)
       }
 
-    private def renderContent(context:Any, partials:Map[String,Mustache])(template:String):String =
+    private def renderContent(context:Any
+                  , partials:Map[String,Mustache]
+                  , callstack:List[Mustache]
+                ) ( template:String ) : String =
       // it will be children nodes in most cases
       // TODO: some cache for dynamically generated templates?
       if (template == childrenSource)
-        childrenTemplate.render(context, partials)
-      else 
-        (new Mustache(template, startOTag, startCTag)).render(context, partials)
+        childrenTemplate.render(context, partials, callstack)
+      else {
+        val t = new Mustache(template, startOTag, startCTag)
+        t.render(context, partials, callstack)
+      }
 
     def templateSource:String = source
   }
@@ -555,8 +572,8 @@ package mustache {
 
     def render(context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct = {
-      val v = format(valueOf(key,context,partials,template,"",defaultRender(otag,ctag)))
+          , callstack:List[Mustache]):TokenProduct = {
+      val v = format(valueOf(key,context,partials,callstack,"",defaultRender(otag,ctag)))
       new TokenProduct {
         val maxLength = v.length
         def write(out:StringBuilder):Unit = {out.append(v)}
@@ -574,8 +591,8 @@ package mustache {
 
     def render(context:Any
           , partials:Map[String,Mustache]
-          , template:Mustache):TokenProduct = { 
-      val v = format(valueOf(key,context,partials,template,"",defaultRender(otag,ctag)))
+          , callstack:List[Mustache]):TokenProduct = { 
+      val v = format(valueOf(key,context,partials,callstack,"",defaultRender(otag,ctag)))
       new TokenProduct {
         val maxLength = (v.length*1.2).toInt
         def write(out:StringBuilder):Unit =
