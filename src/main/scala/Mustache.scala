@@ -394,14 +394,19 @@ package mustache {
         , callstack:List[Mustache]
         , childrenString:String
         , render: (Any, Map[String, Mustache],List[Mustache])=>(String)=>String
-    ):Any = {
+    ):Any = 
+    {
       val r = render(context, partials, callstack)
 
       val wrappedEval = 
         callstack.foldLeft(()=>{ eval(fromContext(key, context, callstack)
               , childrenString, r) })( (f,e)=>{ ()=>{e.withContextAndRenderFn(context,r)(f())} } )
-      wrappedEval()
+      wrappedEval() match {
+        case None if (key == ".") => context
+        case other => other
+      }
     }
+    
 
     @tailrec
     private def eval(
@@ -548,7 +553,8 @@ package mustache {
           else EmptyProduct
 
         case other => 
-          composite(children, other, partials, callstack)
+          if (!inverted) composite(children, other, partials, callstack)
+          else EmptyProduct
       }
 
     private def renderContent(context:Any
