@@ -16,10 +16,10 @@ object Issue2Specification extends SpecificationWithJUnit {
 
     "render strings obtained from context" in {
       new Mustache(
-        "{{#name}}Hello, {{.}}!{{/name}}"
+        "{{#name}}shouldn't be displayed{{/name}}"
       ).render(Map(
         "name"->(()=>{ "Chris" })
-      )).toString must be equalTo("Hello, Chris!")
+      )).toString must be equalTo("Chris")
     }
 
     "display inverted section content if lambda returns None" in {
@@ -46,15 +46,7 @@ object Issue2Specification extends SpecificationWithJUnit {
       )).toString must be equalTo("Hey!")
     }
 
-    "display inverted section content if lambda returns empty string" in {
-      new Mustache(
-        "{{^foo}}Hey!{{/foo}}"
-      ).render(Map(
-        "foo"->(()=>{ "" })
-      )).toString must be equalTo("Hey!")
-    }
-
-    "dive in into object when rendering section token" in {
+    "dive into an object when rendering section token" in {
       object SampleObject
 
       new Mustache(

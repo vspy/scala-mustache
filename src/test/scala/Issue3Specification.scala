@@ -14,7 +14,7 @@ object Issue3Specification extends SpecificationWithJUnit {
       )).toString must be equalTo("bar")
     }
 
-    "proporly handle Some[T] when rendering inverse section token" in {
+    "properly handle Some[T] when rendering inverse section token" in {
       new Mustache(
         "{{^foo}}this string should't be rendered{{/foo}}"
       ).render(Map(
@@ -36,6 +36,14 @@ object Issue3Specification extends SpecificationWithJUnit {
       ).render(Map(
         "foo" -> None
       )).toString must be equalTo("42")
+    }
+
+    "resolve nested Option[T] when rendering section token" in {
+      new Mustache(
+        "{{#foo}}{{value}}{{/foo}}"
+      ).render(Map(
+        "foo" -> Some(Some(Some(Map("value"->"bar"))))
+      )).toString must be equalTo("bar")
     }
 
   }

@@ -12,7 +12,7 @@ object ContextHandlerSpecification extends SpecificationWithJUnit {
       def globalFn1(str:String) = ">"+str+"<"
     }
 
-    def render(context:Any,partials:Map[String,Mustache],callstack:List[Mustache])(str:String) = ""
+    def render(context:Any,partials:Map[String,Mustache],callstack:List[Any])(str:String) = ""
 
     "return None for null context" in {
       T.valueOf("testKey", null, Map(), List(SampleTemplate),"", render) must be equalTo(None)
