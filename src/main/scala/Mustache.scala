@@ -543,6 +543,9 @@ package mustache {
           composite(tasks, partials, callstack)
         }
         case str:String => StringProduct(str)
+        case Some(value) =>
+          if (!inverted) composite(children, value, partials, callstack)
+          else EmptyProduct
 
         case other => 
           composite(children, other, partials, callstack)
