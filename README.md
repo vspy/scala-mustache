@@ -73,7 +73,7 @@ Alternatively you can pack your helpers directly into the Mustache subclass. Fol
       def wrapped(str:String) = "<b>"+render(str)+"</b>"
 
     }
-  
+    val template = new MyMustache("{{#wrapped}}{{name}} is awesome.{{/wrapped}}") 
     template.render(Map("name"->"Willy"))
 
 Sometimes it is nice to keep different kinds of helpers separate. To do so, you can define helper traits and then mix them up as needed:
