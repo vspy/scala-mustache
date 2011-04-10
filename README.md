@@ -92,6 +92,10 @@ MustacheHelperSupport trait defines following methods you can use in your helper
     protected def context:Any                   // returns current context
     protected def render(template:String):Any   // renders template string
 
+Dependencies / Build
+--------------------
+
+This project has absolutely zero runtime dependencies and you can build it with [Simple Build Tool][2].
 
 Licensing
 ---------
@@ -103,4 +107,4 @@ I’m not a lawyer and this is not a legal advice, but it is free to use in any 
 Enjoy !
 
 [1]: http://github.com/defunkt/mustache
-
+[2]: http://code.google.com/p/simple-build-tool/
