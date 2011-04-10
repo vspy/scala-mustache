@@ -74,9 +74,9 @@ Alternatively you can pack your helpers directly into the Mustache subclass. Fol
 
     }
   
-  template.render(Map("name"->"Willy"))
+    template.render(Map("name"->"Willy"))
 
-Sometimes it is nice to keep different kinds of helpers separate. To do so, you can define the helper traits and then mix them up as needed:
+Sometimes it is nice to keep different kinds of helpers separate. To do so, you can define helper traits and then mix them up as needed:
 
     trait MyHelper {
       this: MyHelper with MustacheHelperSupport =>
