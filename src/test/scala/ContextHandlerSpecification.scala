@@ -1,6 +1,8 @@
-import org.specs._
-import org.specs.runner._
-import scala.actors.Futures._
+import scala.concurrent.{future}
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import org.specs2.mutable._
+import org.specs2.runner._
 
 package mustache {
 object ContextHandlerSpecification extends SpecificationWithJUnit {

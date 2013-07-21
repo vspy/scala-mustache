@@ -1,5 +1,5 @@
-import org.specs._
-import org.specs.runner._
+import org.specs2.mutable._
+import org.specs2.runner._
 
 package mustache {
 object ValuesFormatterSpecification extends SpecificationWithJUnit {

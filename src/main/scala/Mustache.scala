@@ -2,6 +2,8 @@ import scala.annotation.tailrec
 import scala.io.Source
 import scala.collection.MapLike
 import java.lang.reflect.{Field=>F,Method=>M}
+import scala.concurrent.{Await, Awaitable}
+import scala.concurrent.duration._
 
 package mustache {
 
@@ -416,6 +418,9 @@ package mustache {
     ):Any =
       value match {
         case Some(someValue) => eval(someValue, childrenString, render)
+
+        case a:Awaitable[_] =>
+          eval(Await.result(a, Duration.Inf), childrenString, render)
 
         case f:Function0[_] => 
           eval(f(), childrenString, render)
